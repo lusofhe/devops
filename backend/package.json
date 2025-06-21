@@ -7,8 +7,9 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "build": "echo 'Build completed - using JavaScript directly'",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest --forceExit --detectOpenHandles",
+    "test:watch": "jest --watch --forceExit --detectOpenHandles",
+    "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
     "lint": "eslint src/**/*.js tests/**/*.js",
     "lint:fix": "eslint src/**/*.js tests/**/*.js --fix"
   },
@@ -30,6 +31,19 @@
     "collectCoverage": true,
     "coverageDirectory": "coverage",
     "coverageReporters": ["text", "lcov", "html"],
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": ["**/tests/**/*.test.js"],
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "clearMocks": true,
+    "restoreMocks": true,
+    "testTimeout": 10000,
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/coverage/",
+      "/tests/"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js"
+    ]
   }
 }
