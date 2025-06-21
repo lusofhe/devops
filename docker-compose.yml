@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: hello-world-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - hello-world-network
+
+  backend:
+    image: ${DOCKER_USERNAME}/hello-world-backend:${IMAGE_TAG}
+    container_name: hello-world-backend
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/helloworld?authSource=admin
+      PORT: 3000
+    depends_on:
+      - mongodb
+    networks:
+      - hello-world-network
+
+  frontend:
+    image: ${DOCKER_USERNAME}/hello-world-frontend:${IMAGE_TAG}
+    container_name: hello-world-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - hello-world-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  hello-world-network:
+    driver: bridge

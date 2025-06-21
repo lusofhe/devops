@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .message-form {
+            margin: 20px 0;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .messages {
+            margin-top: 30px;
+        }
+        .message-item {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .timestamp {
+            font-size: 0.8em;
+            color: #666;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Hello World App</h1>
+
+        <div id="status" class="status">Checking connection...</div>
+
+        <div class="message-form">
+            <input type="text" id="messageInput" placeholder="Enter your message..." />
+            <button onclick="sendMessage()">Send Message</button>
+            <button onclick="loadMessages()">Refresh</button>
+        </div>
+
+        <div class="messages">
+            <h3>Messages:</h3>
+            <div id="messagesList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        async function checkBackendConnection() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                document.getElementById('status').innerHTML = '✅ Backend connected';
+                document.getElementById('status').className = 'status connected';
+                return true;
+            } catch (error) {
+                document.getElementById('status').innerHTML = '❌ Backend not available';
+                document.getElementById('status').className = 'status error';
+                return false;
+            }
+        }
+
+        async function loadMessages() {
+            try {
+                const response = await fetch(`${API_BASE}/messages`);
+                const messages = await response.json();
+
+                const messagesList = document.getElementById('messagesList');
+                if (messages.length === 0) {
+                    messagesList.innerHTML = '<p>No messages yet. Be the first to send one!</p>';
+                } else {
+                    messagesList.innerHTML = messages.map(msg => `
+                        <div class="message-item">
+                            <div>${msg.text}</div>
+                            <div class="timestamp">${new Date(msg.timestamp).toLocaleString()}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messagesList').innerHTML = '<p>Error loading messages</p>';
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+
+            if (!text) {
+                alert('Please enter a message');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    await loadMessages();
+                } else {
+                    alert('Error sending message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Error sending message');
+            }
+        }
+
+        // Allow sending message with Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Initialize app
+        window.onload = async function() {
+            await checkBackendConnection();
+            await loadMessages();
+        };
+    </script>
+</body>
+</html>
