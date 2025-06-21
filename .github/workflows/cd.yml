@@ -38,7 +38,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             # Stop existing containers
-            docker-compose down || true
+            docker compose down || true
 
             # Pull latest images
             docker pull ${{ secrets.DOCKER_USERNAME }}/hello-world-backend:${{ steps.tag.outputs.image_tag }}
@@ -88,13 +88,13 @@ jobs:
             EOF
 
             # Start services with environment variables
-            docker-compose --env-file .env up -d
+            docker compose --env-file .env up -d
 
             # Wait for services to be healthy
             sleep 30
 
             # Check if services are running
-            docker-compose ps
+            docker compose ps
 
             # Clean up .env file for security
             rm -f .env
