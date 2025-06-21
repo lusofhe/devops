@@ -116,7 +116,10 @@ jobs:
       - name: Generate Version Tag
         id: version
         run: |
-          echo "version=$(date +%Y%m%d)-${{ github.sha:0:7 }}" >> $GITHUB_OUTPUT
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          VERSION_TAG=$(date +%Y%m%d)-${SHORT_SHA}
+          echo "version=${VERSION_TAG}" >> $GITHUB_OUTPUT
+          echo "Generated version tag: ${VERSION_TAG}"
 
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v4
