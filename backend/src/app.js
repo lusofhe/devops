@@ -41,11 +41,22 @@ app.get('/api/messages', async (req, res) => {
 
 app.post('/api/messages', async (req, res) => {
   try {
-    const message = new Message({ text: req.body.text });
+    // Validate input
+    const { text } = req.body;
+
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ error: 'Text is required and cannot be empty' });
+    }
+
+    const message = new Message({ text: text.trim() });
     await message.save();
     res.status(201).json(message);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    // Handle Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message });
   }
 });
 
