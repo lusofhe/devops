@@ -1,0 +1,374 @@
+<h1>Kartentrainer - Deutsch-Vietnamesischer Vokabeltrainer</h1>
+
+<div class="control-panel" id="control-panel">
+    <h2>Einstellungen</h2>
+    <div class="responsive-container">
+        <div class="flex-item">
+            <label for="voice-select-trainer">Stimme:</label>
+            <select id="voice-select-trainer">
+                <option value="FEMALE">Weiblich</option>
+                <option value="MALE">Männlich</option>
+                <option value="NEUTRAL">Neutral</option>
+            </select>
+        </div>
+        <div class="flex-item">
+            <label for="speed-input-trainer">Geschwindigkeit:</label>
+            <input type="number" id="speed-input-trainer" value="0.8" min="0.25" max="4" step="0.1">
+        </div>
+    </div>
+</div>
+
+<div class="list-selector">
+    <h2>Vokabelliste auswählen</h2>
+    <div class="responsive-container">
+        <div class="flex-item">
+            <select id="list-select">
+                <option value="">Vokabelliste auswählen</option>
+            </select>
+        </div>
+        <div class="flex-item">
+            <button id="load-list-button" class="play-button">Liste laden</button>
+        </div>
+    </div>
+</div>
+
+<!-- Verbesserte Karten-Container mit 3D-Effekt -->
+<div class="card-container">
+    <div class="card-scene">
+        <div class="card-3d" id="card-3d">
+            <div class="card-face card-face-front" id="card-face-front">
+                <div id="card-front-content" class="card-content">Wähle eine Vokabelliste aus</div>
+            </div>
+            <div class="card-face card-face-back" id="card-face-back">
+                <div id="card-back-content" class="card-content">Wähle eine Vokabelliste aus</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-buttons">
+        <button id="de-audio-button" class="play-button">🔊 DE</button>
+        <button id="vn-audio-button" class="play-button">🔊 VN</button>
+    </div>
+
+    <div class="control-buttons">
+        <button id="flip-button" class="play-button">Karte umdrehen</button>
+        <button id="known-button" class="play-button">Gewusst</button>
+        <button id="unknown-button" class="play-button">Nicht gewusst</button>
+    </div>
+</div>
+
+<div id="stats-container" class="stats-container">
+    <h2>Statistik</h2>
+    <p>Verbleibende Karten: <span id="remaining-count">0</span></p>
+    <p>Bekannte Wörter: <span id="known-count">0</span></p>
+</div>
+
+<style>
+    /* Karten-Styling */
+    .card-container {
+        perspective: 1000px;
+        margin: 30px auto;
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .card-scene {
+        width: 100%;
+        height: 200px;
+        perspective: 1000px;
+    }
+
+    .card-3d {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.8s;
+    }
+
+    .card-3d.flipped {
+        transform: rotateY(180deg);
+    }
+
+    .card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5em;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .card-face-front {
+        background: linear-gradient(135deg, #3a7bd5, #00d2ff);
+        color: white;
+    }
+
+    .card-face-back {
+        background: linear-gradient(135deg, #FF8008, #FFA93B);
+        color: white;
+        transform: rotateY(180deg);
+    }
+
+    .card-content {
+        text-align: center;
+        width: 100%;
+    }
+
+    /* Responsive Anpassungen */
+    @media (max-width: 600px) {
+        .card-scene {
+            height: 150px;
+        }
+
+        .card-face {
+            font-size: 1.2em;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM-Elemente
+        const listSelect = document.getElementById('list-select');
+        const loadListButton = document.getElementById('load-list-button');
+        const card3D = document.getElementById('card-3d');
+        const cardFrontContent = document.getElementById('card-front-content');
+        const cardBackContent = document.getElementById('card-back-content');
+        const flipButton = document.getElementById('flip-button');
+        const knownButton = document.getElementById('known-button');
+        const unknownButton = document.getElementById('unknown-button');
+        const deAudioButton = document.getElementById('de-audio-button');
+        const vnAudioButton = document.getElementById('vn-audio-button');
+        const remainingCount = document.getElementById('remaining-count');
+        const knownCount = document.getElementById('known-count');
+        const voiceSelect = document.getElementById('voice-select-trainer');
+        const speedInput = document.getElementById('speed-input-trainer');
+
+        // Audio-Player
+        const audioPlayer = document.getElementById('audio-player');
+
+        // Kartentrainer-Instanz
+        let cardTrainer = null;
+        let knownWords = 0;
+        let isFlipped = false;
+
+        // Event Listener für Audio-Buttons
+        deAudioButton.addEventListener('click', function() {
+            if (cardTrainer) {
+                playWordAudio('DE');
+            }
+        });
+
+        vnAudioButton.addEventListener('click', function() {
+            if (cardTrainer) {
+                playWordAudio('VN');
+            }
+        });
+
+        // Event Listener für Kartentrainer-Buttons
+        flipButton.addEventListener('click', function() {
+            if (cardTrainer) {
+                flipCard();
+                updateCardDisplay();
+            }
+        });
+
+        knownButton.addEventListener('click', function() {
+            if (cardTrainer) {
+                cardTrainer.markAsKnown();
+                knownWords++;
+
+                // Reset card to front side for next card
+                if (isFlipped) {
+                    flipCard();
+                }
+
+                updateCardDisplay();
+                updateStats();
+            }
+        });
+
+        unknownButton.addEventListener('click', function() {
+            if (cardTrainer) {
+                cardTrainer.markAsUnknown();
+
+                // Reset card to front side for next card
+                if (isFlipped) {
+                    flipCard();
+                }
+
+                updateCardDisplay();
+                updateStats();
+            }
+        });
+
+        // Karte drehen Funktion
+        function flipCard() {
+            card3D.classList.toggle('flipped');
+            isFlipped = !isFlipped;
+            cardTrainer.flipCard();
+        }
+
+        // Vokabellisten laden
+        async function loadVocabularyLists() {
+            try {
+                const response = await fetch('/api/tts/lists');
+                const data = await response.json();
+
+                if (data.lists && data.lists.length > 0) {
+                    // Listen-Dropdown füllen
+                    listSelect.innerHTML = '<option value="">Vokabelliste auswählen</option>';
+                    data.lists.forEach(list => {
+                        const option = document.createElement('option');
+                        option.value = list.filename;
+                        option.textContent = list.displayName;
+                        listSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Vokabellisten:', error);
+                alert('Fehler beim Laden der Vokabellisten');
+            }
+        }
+
+        // Liste laden
+        loadListButton.addEventListener('click', async function() {
+            const selectedList = listSelect.value;
+            if (!selectedList) {
+                alert('Bitte wähle eine Vokabelliste aus');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tts/list/${selectedList}`);
+                const data = await response.json();
+
+                if (data.vocabulary && data.vocabulary.length > 0) {
+                    // CardTrainer initialisieren
+                    cardTrainer = new CardTrainer(data.vocabulary);
+                    knownWords = 0;
+                    isFlipped = false;
+                    card3D.classList.remove('flipped'); // Reset card to front side
+                    updateCardDisplay();
+                    updateStats();
+
+                    // UI-Elemente aktivieren
+                    flipButton.disabled = false;
+                    knownButton.disabled = false;
+                    unknownButton.disabled = false;
+                    deAudioButton.disabled = false;
+                    vnAudioButton.disabled = false;
+                } else {
+                    cardFrontContent.textContent = "Diese Liste enthält keine Vokabeln.";
+                    cardBackContent.textContent = "Diese Liste enthält keine Vokabeln.";
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden der Liste:', error);
+                alert('Fehler beim Laden der Vokabelliste');
+            }
+        });
+
+        // Karte aktualisieren
+        function updateCardDisplay() {
+            if (cardTrainer) {
+                const card = cardTrainer.vocabulary[cardTrainer.currentIndex];
+                // Vorderseite ist immer Deutsch, Rückseite immer Vietnamesisch
+                cardFrontContent.textContent = card.DE;
+                cardBackContent.textContent = card.VN;
+            }
+        }
+
+        // Statistik aktualisieren
+        function updateStats() {
+            if (cardTrainer) {
+                remainingCount.textContent = cardTrainer.vocabulary.length;
+                knownCount.textContent = knownWords;
+            }
+        }
+
+        // Wort vorsprechen
+        async function playWordAudio(language) {
+            if (!cardTrainer) return;
+
+            const card = cardTrainer.vocabulary[cardTrainer.currentIndex];
+            const text = language === 'DE' ? card.DE : card.VN;
+            const apiLangCode = language === 'DE' ? 'de-DE' : 'vi-VN';
+            const speed = parseFloat(speedInput.value);
+            const voice = voiceSelect.value;
+
+            try {
+                const response = await fetch('/api/tts/generate-word', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        language: apiLangCode,
+                        speed: speed,
+                        voice: voice
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    audioPlayer.src = data.audio;
+                    audioPlayer.play();
+                } else {
+                    console.error('Fehler bei der Audio-Generierung:', data.error);
+                }
+            } catch (error) {
+                console.error('Fehler beim Abspielen des Wortes:', error);
+            }
+        }
+
+        // CardTrainer-Klasse (inline-Definition für Vollständigkeit)
+        class CardTrainer {
+            constructor(vocabulary) {
+                this.vocabulary = vocabulary;
+                this.currentIndex = 0;
+                this.isFront = true;
+            }
+
+            flipCard() {
+                this.isFront = !this.isFront;
+            }
+
+            markAsKnown() {
+                const card = this.vocabulary.splice(this.currentIndex, 1)[0];
+                this.vocabulary.push(card);
+                if (this.currentIndex >= this.vocabulary.length) {
+                    this.currentIndex = 0;
+                }
+                this.isFront = true;
+            }
+
+            markAsUnknown() {
+                const card = this.vocabulary.splice(this.currentIndex, 1)[0];
+                this.vocabulary.splice(this.currentIndex + 3 > this.vocabulary.length ? this.vocabulary.length : this.currentIndex + 3, 0, card);
+                if (this.currentIndex >= this.vocabulary.length) {
+                    this.currentIndex = 0;
+                }
+                this.isFront = true;
+            }
+        }
+
+        // Initialisierung
+        loadVocabularyLists();
+
+        // Buttons deaktivieren bis eine Liste geladen wird
+        flipButton.disabled = true;
+        knownButton.disabled = true;
+        unknownButton.disabled = true;
+        deAudioButton.disabled = true;
+        vnAudioButton.disabled = true;
+    });
+</script>

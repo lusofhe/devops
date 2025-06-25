@@ -1,0 +1,48 @@
+<h1>Vokabellisten</h1>
+
+<div class="container">
+    <div class="sidebar">
+        <h3>Listen</h3>
+        <div id="lists-container">
+            <p class="loading">Lade Vokabellisten...</p>
+        </div>
+    </div>
+
+    <div class="vocab-list">
+        <div id="vocab-header">
+            <h2>Wähle eine Vokabelliste aus</h2>
+        </div>
+
+        <div class="control-panel" id="control-panel" style="display: none;">
+            <button id="generate-all-button" class="play-button">Alle Vokabeln generieren</button>
+            <button id="play-all-button" class="play-button" disabled>Alle nacheinander abspielen</button>
+            <button id="show-track-editor-button" class="play-button">Track Editor</button>
+            <select id="voice-select">
+                <option value="FEMALE">Weiblich</option>
+                <option value="MALE">Männlich</option>
+                <option value="NEUTRAL">Neutral</option>
+            </select>
+            <label for="speed-input">Geschwindigkeit:</label>
+            <input type="number" id="speed-input" value="0.8" min="0.25" max="4" step="0.1">
+        </div>
+
+        <!-- Track Editor Bereich -->
+        <div id="track-editor" style="display: none;" class="track-editor">
+            <h3>Track Editor</h3>
+            <p>Erstellen Sie einen benutzerdefinierten Track mit folgender Syntax:</p>
+            <pre>DE(1.0) Pause (2s) VN(0.8) Pause (5s)
+DE(1.0) VN(0.8) DE(1.0) VN(1.0)
+DE(1.0) VN(0.8) DE(1.2) VN(0.4) DE(1.2) VN(0.8) DE(1.2) VN(0.8) DE(1.2) VN(0.8) DE(1.2) VN(0.8) Pause (3s)</pre>
+            <textarea id="track-input" rows="5" class="track-input" placeholder="Geben Sie hier Ihren Track ein..."></textarea>
+            <div class="button-row">
+                <button id="generate-track-button" class="play-button">Track generieren</button>
+                <button id="play-track-button" class="play-button" disabled>Track abspielen</button>
+                <button id="close-track-editor-button" class="cancel-button">Schließen</button>
+            </div>
+        </div>
+
+        <div id="vocab-container" class="vocab-grid"></div>
+    </div>
+</div>
+
+<script src="js/app.js"></script>

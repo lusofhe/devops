@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Image tag to deploy (default: latest)'
+        description: 'Image tag to deploy'
         required: false
         default: 'latest'
 
@@ -20,15 +20,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set Image Tag
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "image_tag=latest" >> $GITHUB_OUTPUT
-          fi
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.7
@@ -41,98 +32,70 @@ jobs:
             docker compose down || true
 
             # Pull latest images
-            docker pull ${{ secrets.DOCKER_USERNAME }}/hello-world-backend:${{ steps.tag.outputs.image_tag }}
-            docker pull ${{ secrets.DOCKER_USERNAME }}/hello-world-frontend:${{ steps.tag.outputs.image_tag }}
+            docker pull ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.tag.outputs.image_tag }}
 
-            # Create .env file with secrets
+            # Create .env file
             cat > .env << EOF
             DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
             IMAGE_TAG=${{ steps.tag.outputs.image_tag }}
             MONGO_USERNAME=${{ secrets.MONGO_USERNAME }}
             MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+            GOOGLE_TTS_API_KEY=${{ secrets.GOOGLE_TTS_API_KEY }}
             EOF
 
-            # Create docker-compose.yml if not exists
+            # Create docker-compose.yml on server
             cat > docker-compose.yml << EOF
             version: '3.8'
-
             services:
               mongodb:
                 image: mongo:latest
                 environment:
                   MONGO_INITDB_ROOT_USERNAME: \${MONGO_USERNAME}
                   MONGO_INITDB_ROOT_PASSWORD: \${MONGO_PASSWORD}
+                  MONGO_INITDB_DATABASE: vocabulary
                 ports:
                   - "27017:27017"
                 volumes:
                   - mongodb_data:/data/db
 
-              backend:
-                image: \${DOCKER_USERNAME}/hello-world-backend:\${IMAGE_TAG}
-                ports:
-                  - "3000:3000"
+              mongo-express:
+                image: mongo-express:latest
                 environment:
-                  MONGODB_URI: mongodb://\${MONGO_USERNAME}:\${MONGO_PASSWORD}@mongodb:27017/helloworld?authSource=admin
+                  ME_CONFIG_MONGODB_SERVER: mongodb
+                  ME_CONFIG_MONGODB_PORT: 27017
+                  ME_CONFIG_MONGODB_ADMINUSERNAME: \${MONGO_USERNAME}
+                  ME_CONFIG_MONGODB_ADMINPASSWORD: \${MONGO_PASSWORD}
+                  ME_CONFIG_BASICAUTH_USERNAME: admin
+                  ME_CONFIG_BASICAUTH_PASSWORD: admin123
+                ports:
+                  - "8081:8081"
                 depends_on:
                   - mongodb
 
-              frontend:
-                image: \${DOCKER_USERNAME}/hello-world-frontend:\${IMAGE_TAG}
+              app:
+                image: \${DOCKER_USERNAME}/sprachenlern-app:\${IMAGE_TAG}
                 ports:
-                  - "80:80"
+                  - "3000:3000"
+                environment:
+                  MONGODB_URI: mongodb://\${MONGO_USERNAME}:\${MONGO_PASSWORD}@mongodb:27017/vocabulary?authSource=admin
+                  GOOGLE_TTS_API_KEY: \${GOOGLE_TTS_API_KEY}
+                  NODE_ENV: production
                 depends_on:
-                  - backend
+                  - mongodb
+                volumes:
+                  - audio_files:/app/public/audio
 
             volumes:
               mongodb_data:
+              audio_files:
             EOF
 
-            # Start services with environment variables
+            # Start services
             docker compose --env-file .env up -d
 
-            # Wait for services to be healthy
+            # Health check
             sleep 30
-
-            # Check if services are running
             docker compose ps
 
-            # Clean up .env file for security
+            # Clean up
             rm -f .env
-
-      - name: Health Check
-        run: |
-          # Simple health check (adjust URL as needed)
-          sleep 60
-          curl -f http://${{ secrets.HOST }}/health || exit 1
-
-  # Optional: Kubernetes Deployment
-  deploy-k8s:
-    runs-on: ubuntu-latest
-    needs: deploy
-    if: ${{ vars.ENABLE_K8S_DEPLOY == 'true' }}
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: '3.12.0'
-
-      - name: Configure kubectl
-        uses: azure/k8s-set-context@v1
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.KUBE_CONFIG }}
-
-      - name: Deploy with Helm
-        working-directory: helm
-        run: |
-          helm upgrade --install hello-world ./hello-world \
-            --namespace production \
-            --create-namespace \
-            --set backend.image.tag=${{ steps.tag.outputs.image_tag }} \
-            --set frontend.image.tag=${{ steps.tag.outputs.image_tag }} \
-            --set mongodb.auth.rootUsername=${{ secrets.MONGO_USERNAME }} \
-            --set mongodb.auth.rootPassword=${{ secrets.MONGO_PASSWORD }} \
-            --wait

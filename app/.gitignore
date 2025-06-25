@@ -1,0 +1,20 @@
+node_modules/
+# Sensible Konfigurationsdateien und Umgebungsvariablen
+config/googleapikey.json
+config/database.local.js
+.env
+.env.local
+.env.production
+.env.development
+
+# Logs und Cache
+logs/
+*.log
+npm-debug.log*
+public/audio/*.mp3
+
+# IDE und System
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db

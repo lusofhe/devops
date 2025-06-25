@@ -1,0 +1,42 @@
+    </main>
+</div>
+
+<audio id="audio-player" style="display:none;"></audio>
+
+<script>
+    // JavaScript für das Ein- und Ausblenden der Navigation
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuToggle = document.getElementById('menuToggle');
+        const navSidebar = document.getElementById('navSidebar');
+        const mainContent = document.getElementById('mainContent');
+
+        // Funktion zum Umschalten der Navigation
+        function toggleNav() {
+            navSidebar.classList.toggle('open');
+            mainContent.classList.toggle('nav-open');
+            menuToggle.classList.toggle('open');
+
+            // Text des Menü-Buttons ändern
+            menuToggle.textContent = navSidebar.classList.contains('open') ? '✕' : '☰';
+        }
+
+        // Event-Listener für den Menü-Button
+        menuToggle.addEventListener('click', toggleNav);
+
+        // Bei kleinen Bildschirmen Navigation schließen, wenn ein Navigationslink geklickt wird
+        if (window.innerWidth < 1024) {
+            const navLinks = navSidebar.querySelectorAll('a');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    toggleNav();
+                });
+            });
+        }
+    });
+</script>
+
+<!-- Module einbinden -->
+<%- typeof script !== 'undefined' ? script : '' %>
+
+</body>
+</html>

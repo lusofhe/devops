@@ -1,0 +1,37 @@
+<h1>Vokabel-Editor</h1>
+
+<div class="editor-container responsive-container">
+    <h2>Neue Vokabelliste erstellen</h2>
+
+    <div>
+        <label for="liste-name">Name der Liste:</label>
+        <input type="text" id="liste-name" placeholder="z.B. buch2">
+    </div>
+
+    <div id="feedback-container"></div>
+
+    <table class="vocab-table responsive-table" id="vocab-editor">
+        <thead>
+            <tr>
+                <th>Deutsch</th>
+                <th>Vietnamesisch</th>
+                <th>Aktion</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><input type="text" class="deutsch-input" placeholder="Deutschen Begriff eingeben"></td>
+                <td><input type="text" class="vietnamesisch-input" placeholder="Vietnamesischen Begriff eingeben"></td>
+                <td><button class="remove-row action-button">Entfernen</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="button-row navigation">
+        <button id="add-row-button" class="action-button">Zeile hinzufügen</button>
+        <button id="save-list-button" class="action-button">Liste speichern</button>
+        <button id="clear-form-button" class="action-button">Formular leeren</button>
+    </div>
+</div>
+
+<script src="js/editor.js"></script>

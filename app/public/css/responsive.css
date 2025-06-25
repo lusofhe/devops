@@ -1,0 +1,212 @@
+/* Basis-Einstellungen für responsives Design */
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+/* Mobile-First Ansatz - Grundeinstellungen für Smartphone */
+body {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 100%;
+  padding: 10px;
+  margin: 0 auto;
+}
+
+/* Responsive Container */
+.responsive-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Flexibles Element */
+.flex-item {
+  flex: 1;
+  padding: 15px;
+  min-width: 0; /* Verhindert Überlauf bei kleinen Bildschirmen */
+}
+
+/* Vokabellisten Container */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 100%;
+  background-color: #f0f0f0;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+/* Vokabel-Grid für strukturiertere Ansicht */
+.vocab-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* Tabellen-Layout für Smartphone optimieren */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Überschriften ausblenden auf kleinen Geräten */
+thead {
+  display: none;
+}
+
+tr {
+  margin-bottom: 15px;
+  display: block;
+  border: 1px solid #ddd;
+}
+
+td {
+  display: block;
+  position: relative;
+  padding: 8px 8px 8px 50%;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+td:before {
+  position: absolute;
+  left: 6px;
+  width: 45%;
+  padding-right: 10px;
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+/* Beschriftungen für die Tabellenzellen */
+td:nth-of-type(1):before { content: "Deutsch"; }
+td:nth-of-type(2):before { content: "Vietnamesisch"; }
+td:nth-of-type(3):before { content: "Aktionen"; }
+
+/* Card Design für Kartentrainer */
+.card-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.card {
+  width: 90%;
+  max-width: 500px;
+  min-height: 150px;
+  padding: 20px;
+}
+
+/* Navigation und Kontrollelemente */
+.navigation, .control-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Control-Buttons Anpassung für kleine Bildschirme */
+.control-buttons button {
+  flex: 1;
+  min-width: 120px;
+  margin: 5px 0;
+}
+
+/* Responsive Bilder und Medien */
+img, audio, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Tablet/Desktop-Bereich (ab 768px) */
+@media screen and (min-width: 768px) {
+  body {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .container {
+    flex-direction: row;
+  }
+
+  .sidebar {
+    width: 250px;
+    flex-shrink: 0;
+  }
+
+  .responsive-container {
+    flex-direction: row;
+  }
+
+  .vocab-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+
+  /* Tabellen für Tablet/Desktop */
+  table {
+    display: table;
+    width: 100%;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tbody {
+    display: table-row-group;
+  }
+
+  tr {
+    display: table-row;
+    margin-bottom: 0;
+    border: none;
+  }
+
+  th, td {
+    display: table-cell;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+
+  td {
+    padding: 10px;
+    position: static;
+  }
+
+  td:before {
+    display: none;
+    content: none;
+  }
+
+  .control-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    width: 80%;
+  }
+
+  .vocab-list {
+    flex-grow: 1;
+  }
+}
