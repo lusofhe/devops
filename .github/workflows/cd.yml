@@ -31,13 +31,13 @@ jobs:
             # Stop existing containers
             docker compose down || true
 
-            # Pull latest images
-            docker pull ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.tag.outputs.image_tag }}
+            # Pull latest images - FIX: Verwende festen Tag
+            docker pull ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:latest
 
             # Create .env file
             cat > .env << EOF
             DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
-            IMAGE_TAG=${{ steps.tag.outputs.image_tag }}
+            IMAGE_TAG=latest
             MONGO_USERNAME=${{ secrets.MONGO_USERNAME }}
             MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
             GOOGLE_TTS_API_KEY=${{ secrets.GOOGLE_TTS_API_KEY }}
@@ -97,5 +97,9 @@ jobs:
             sleep 30
             docker compose ps
 
-            # Clean up
-            rm -f .env
+            # Test connectivity
+            curl -f http://localhost:3000 || echo "Health check failed"
+
+            # Show public IP for reference
+            echo "Public IP: $(curl -s ifconfig.me 2>/dev/null || echo 'Unknown')"
+            echo "App should be available at: http://$(curl -s ifconfig.me 2>/dev/null):3000"
