@@ -1,4 +1,4 @@
-// backend/tests/setup.js
+// app/tests/setup.js
 // Jest Setup-Datei für globale Test-Konfiguration
 
 // Globale Test-Timeouts für langsamere CI-Umgebungen

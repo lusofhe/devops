@@ -21,12 +21,12 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install Backend Dependencies
-        working-directory: backend
+      - name: Install App Dependencies
+        working-directory: app
         run: npm ci
 
-      - name: Run Backend Tests with Coverage
-        working-directory: backend
+      - name: Run App Tests with Coverage
+        working-directory: app
         run: npm test
 
       - name: SonarQube Scan
