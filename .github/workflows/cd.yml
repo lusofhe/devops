@@ -77,7 +77,7 @@ jobs:
                 ports:
                   - "3000:3000"
                 environment:
-                  MONGODB_URI: mongodb://\${MONGO_USERNAME}:\${MONGO_PASSWORD}@mongodb:27017/vocabulary?authSource=admin
+                  MONGODB_URL: mongodb://\${MONGO_USERNAME}:\${MONGO_PASSWORD}@mongodb:27017/vocabulary?authSource=admin
                   GOOGLE_TTS_API_KEY: \${GOOGLE_TTS_API_KEY}
                   NODE_ENV: production
                 depends_on:
