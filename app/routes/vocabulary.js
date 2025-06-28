@@ -1,109 +1,116 @@
+// routes/vocabulary.js
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const router = express.Router();
 const VocabularyModel = require('../database/models/vocabulary-model');
 
-// Pfad zum Vokabelordner
-const VOCABULARY_DIR = path.join(__dirname, '../vocabulary');
-
-// Sicherstellen, dass der Vokabelordner existiert
-if (!fs.existsSync(VOCABULARY_DIR)) {
-  fs.mkdirSync(VOCABULARY_DIR, { recursive: true });
-}
-
-// Vokabelmodell initialisieren
-const vocabularyModel = new VocabularyModel();
+const router = express.Router();
 
 /**
- * Route zum Speichern einer neuen Vokabelliste
+ * POST /api/vocabulary/save
+ * Speichert eine neue Vokabelliste
  */
 router.post('/save', async (req, res) => {
   try {
     const { name, vocabulary } = req.body;
 
-    if (!name || !vocabulary || !Array.isArray(vocabulary)) {
+    // Validierung der Eingabedaten
+    if (!name || typeof name !== 'string' || name.trim() === '') {
       return res.status(400).json({
         success: false,
-        error: 'Ungültige Daten für die Vokabelliste'
+        error: 'Ungültige Daten: Name ist erforderlich'
       });
     }
 
-    // Validieren, dass jedes Vokabel-Objekt DE und VN hat
-    const isValidVocabulary = vocabulary.every(entry =>
-      entry.DE && typeof entry.DE === 'string' &&
-      entry.VN && typeof entry.VN === 'string'
-    );
-
-    if (!isValidVocabulary) {
+    if (!vocabulary || !Array.isArray(vocabulary) || vocabulary.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Ungültige Vokabeln - jeder Eintrag muss DE und VN haben'
+        error: 'Ungültige Daten: Vokabelliste darf nicht leer sein'
       });
     }
 
-    // Nur in Datenbank speichern, nicht mehr als JSON-Datei
-    try {
-      await vocabularyModel.createList(name, vocabulary);
-    } catch (error) {
-      // Falls Liste bereits existiert, aktualisieren
-      if (error.message.includes('existiert bereits')) {
-        await vocabularyModel.updateList(name, vocabulary);
-      } else {
-        throw error;
+    // Validierung der Vokabeleinträge
+    for (const entry of vocabulary) {
+      if (!entry || typeof entry !== 'object' || !entry.DE || !entry.VN) {
+        return res.status(400).json({
+          success: false,
+          error: 'Ungültige Daten: Jeder Vokabeleintrag muss DE und VN enthalten'
+        });
       }
     }
 
-    res.json({
+    // Neue Vokabelliste erstellen
+    const vocabularyModel = new VocabularyModel();
+    const savedList = await vocabularyModel.createList(name.trim(), vocabulary);
+
+    res.status(200).json({
       success: true,
-      message: `Vokabelliste "${name}" wurde erfolgreich gespeichert`
+      data: savedList,
+      message: 'Vokabelliste erfolgreich gespeichert'
     });
 
   } catch (error) {
-    console.error('Fehler beim Speichern der Vokabelliste:', error);
+    console.error('Error saving vocabulary list:', error);
+
+    // Spezifische Fehlerbehandlung für bereits existierende Listen
+    if (error.message && error.message.includes('existiert bereits')) {
+      return res.status(409).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    // Allgemeine Datenbankfehler
     res.status(500).json({
       success: false,
-      error: 'Serverfehler beim Speichern der Vokabelliste'
+      error: 'Database error: ' + error.message
     });
   }
 });
 
-
 /**
- * Route zum Abrufen aller Vokabellisten
+ * GET /api/vocabulary/lists
+ * Gibt alle verfügbaren Vokabellisten zurück
  */
 router.get('/lists', async (req, res) => {
   try {
+    const vocabularyModel = new VocabularyModel();
     const lists = await vocabularyModel.getAllLists();
+
     res.json({
       success: true,
-      lists: lists.map(list => ({
-        id: list._id,
-        name: list.name,
-        count: list.vocabulary.length
-      }))
+      lists: lists
     });
+
   } catch (error) {
-    console.error('Fehler beim Abrufen der Vokabellisten:', error);
+    console.error('Error fetching vocabulary lists:', error);
     res.status(500).json({
       success: false,
-      error: 'Serverfehler beim Abrufen der Vokabellisten'
+      error: 'Database error: ' + error.message
     });
   }
 });
 
 /**
- * Route zum Abrufen einer einzelnen Vokabelliste
+ * GET /api/vocabulary/list/:name
+ * Gibt eine bestimmte Vokabelliste zurück
  */
 router.get('/list/:name', async (req, res) => {
   try {
-    const listName = req.params.name;
-    const list = await vocabularyModel.getListByName(listName);
+    const { name } = req.params;
+
+    if (!name || name.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Name der Liste ist erforderlich'
+      });
+    }
+
+    const vocabularyModel = new VocabularyModel();
+    const list = await vocabularyModel.getListByName(name.trim());
 
     if (!list) {
       return res.status(404).json({
         success: false,
-        error: `Vokabelliste "${listName}" nicht gefunden`
+        error: 'Vokabelliste nicht gefunden'
       });
     }
 
@@ -112,47 +119,108 @@ router.get('/list/:name', async (req, res) => {
       name: list.name,
       vocabulary: list.vocabulary
     });
+
   } catch (error) {
-    console.error('Fehler beim Abrufen der Vokabelliste:', error);
+    console.error('Error fetching vocabulary list:', error);
     res.status(500).json({
       success: false,
-      error: 'Serverfehler beim Abrufen der Vokabelliste'
+      error: 'Database error: ' + error.message
     });
   }
 });
 
 /**
- * Route zum Löschen einer Vokabelliste
+ * PUT /api/vocabulary/update/:name
+ * Aktualisiert eine vorhandene Vokabelliste
  */
-router.delete('/list/:name', async (req, res) => {
+router.put('/update/:name', async (req, res) => {
   try {
-    const listName = req.params.name;
+    const { name } = req.params;
+    const { vocabulary } = req.body;
 
-    // Aus Datenbank löschen
-    const result = await vocabularyModel.deleteList(listName);
-
-    // JSON-Datei löschen, falls vorhanden (für Abwärtskompatibilität)
-    const filePath = path.join(VOCABULARY_DIR, `${listName}.json`);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (!name || name.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Name der Liste ist erforderlich'
+      });
     }
 
-    if (result === 0) {
+    if (!vocabulary || !Array.isArray(vocabulary) || vocabulary.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ungültige Daten: Vokabelliste darf nicht leer sein'
+      });
+    }
+
+    // Validierung der Vokabeleinträge
+    for (const entry of vocabulary) {
+      if (!entry || typeof entry !== 'object' || !entry.DE || !entry.VN) {
+        return res.status(400).json({
+          success: false,
+          error: 'Ungültige Daten: Jeder Vokabeleintrag muss DE und VN enthalten'
+        });
+      }
+    }
+
+    const vocabularyModel = new VocabularyModel();
+    const updatedCount = await vocabularyModel.updateList(name.trim(), vocabulary);
+
+    if (updatedCount === 0) {
       return res.status(404).json({
         success: false,
-        error: `Vokabelliste "${listName}" nicht gefunden`
+        error: 'Vokabelliste nicht gefunden'
       });
     }
 
     res.json({
       success: true,
-      message: `Vokabelliste "${listName}" wurde gelöscht`
+      message: 'Vokabelliste erfolgreich aktualisiert'
     });
+
   } catch (error) {
-    console.error('Fehler beim Löschen der Vokabelliste:', error);
+    console.error('Error updating vocabulary list:', error);
     res.status(500).json({
       success: false,
-      error: 'Serverfehler beim Löschen der Vokabelliste'
+      error: 'Database error: ' + error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/vocabulary/list/:name
+ * Löscht eine Vokabelliste
+ */
+router.delete('/list/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    if (!name || name.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        error: 'Name der Liste ist erforderlich'
+      });
+    }
+
+    const vocabularyModel = new VocabularyModel();
+    const deletedCount = await vocabularyModel.deleteList(name.trim());
+
+    if (deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Vokabelliste nicht gefunden'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Liste wurde gelöscht'
+    });
+
+  } catch (error) {
+    console.error('Error deleting vocabulary list:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database error: ' + error.message
     });
   }
 });
