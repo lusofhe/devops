@@ -1,7 +1,6 @@
 const TTSService = require('../../services/tts-service');
 const axios = require('axios');
 const fs = require('fs');
-const path = require('path');
 
 jest.mock('axios');
 jest.mock('fs');
@@ -14,11 +13,14 @@ describe('TTSService', () => {
     // Mock environment variable
     process.env.GOOGLE_TTS_API_KEY = mockApiKey;
 
-    // Mock fs.existsSync to return true for audio directory
+    // Mock fs methods
     fs.existsSync.mockReturnValue(true);
-    fs.mkdirSync.mockReturnValue();
-    fs.writeFileSync.mockReturnValue();
-    fs.copyFileSync.mockReturnValue();
+    fs.mkdirSync.mockImplementation(() => {});
+    fs.writeFileSync.mockImplementation(() => {});
+    fs.copyFileSync.mockImplementation(() => {});
+
+    // Reset axios mock
+    axios.post.mockReset();
 
     ttsService = new TTSService();
   });
@@ -38,7 +40,6 @@ describe('TTSService', () => {
     it('should create audio directory if not exists', () => {
       fs.existsSync.mockReturnValue(false);
       new TTSService();
-
       expect(fs.mkdirSync).toHaveBeenCalled();
     });
   });
@@ -63,8 +64,13 @@ describe('TTSService', () => {
     });
 
     it('should keep default for unknown language', () => {
+      // Mock console.warn to prevent output
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
       ttsService.setLanguage('unknown');
       expect(ttsService.language).toBe('de-DE');
+
+      consoleSpy.mockRestore();
     });
   });
 
@@ -107,11 +113,11 @@ describe('TTSService', () => {
       data: { audioContent: mockAudioContent }
     };
 
-    beforeEach(() => {
-      axios.post.mockResolvedValue(mockResponse);
-    });
-
     it('should generate speech successfully', async () => {
+      // Mock that file doesn't exist (cache miss)
+      fs.existsSync.mockReturnValue(false);
+      axios.post.mockResolvedValue(mockResponse);
+
       const result = await ttsService.generateSpeech(mockText);
 
       expect(axios.post).toHaveBeenCalled();
@@ -120,11 +126,12 @@ describe('TTSService', () => {
     });
 
     it('should use cache for repeated requests', async () => {
-      // First call
+      // First call - cache miss
       fs.existsSync.mockReturnValueOnce(false);
+      axios.post.mockResolvedValue(mockResponse);
       await ttsService.generateSpeech(mockText);
 
-      // Second call - should hit cache
+      // Second call - cache hit
       fs.existsSync.mockReturnValueOnce(true);
       await ttsService.generateSpeech(mockText);
 
@@ -132,6 +139,7 @@ describe('TTSService', () => {
     });
 
     it('should handle API errors', async () => {
+      fs.existsSync.mockReturnValue(false);
       const apiError = new Error('API Error');
       apiError.response = { data: 'API Error Details' };
       axios.post.mockRejectedValue(apiError);
@@ -140,6 +148,9 @@ describe('TTSService', () => {
     });
 
     it('should send correct API request', async () => {
+      fs.existsSync.mockReturnValue(false);
+      axios.post.mockResolvedValue(mockResponse);
+
       await ttsService.generateSpeech(mockText);
 
       expect(axios.post).toHaveBeenCalledWith(

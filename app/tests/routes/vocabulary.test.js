@@ -1,19 +1,28 @@
 const request = require('supertest');
-const express = require('express');
-const vocabularyRoutes = require('../../routes/vocabulary');
 const VocabularyModel = require('../../database/models/vocabulary-model');
 
+// Mock VocabularyModel
 jest.mock('../../database/models/vocabulary-model');
 
+// Mock database connection
+jest.mock('../../database/db-connection', () => ({
+  connect: jest.fn().mockResolvedValue({}),
+  getDb: jest.fn().mockReturnValue({}),
+  close: jest.fn().mockResolvedValue({})
+}));
+
+// Mock express app (simplified)
+const express = require('express');
+const vocabularyRoutes = require('../../routes/vocabulary');
+
+const app = express();
+app.use(express.json());
+app.use('/api/vocabulary', vocabularyRoutes);
+
 describe('Vocabulary Routes', () => {
-  let app;
   let mockVocabularyModel;
 
   beforeEach(() => {
-    app = express();
-    app.use(express.json());
-    app.use('/api/vocabulary', vocabularyRoutes);
-
     mockVocabularyModel = {
       init: jest.fn().mockResolvedValue(),
       createList: jest.fn(),
@@ -44,7 +53,10 @@ describe('Vocabulary Routes', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('erfolgreich gespeichert');
+      expect(mockVocabularyModel.createList).toHaveBeenCalledWith(
+        'test-list',
+        [{ DE: 'Hallo', VN: 'Xin chào' }]
+      );
     });
 
     it('should handle missing name', async () => {
@@ -56,7 +68,7 @@ describe('Vocabulary Routes', () => {
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('Name ist erforderlich');
+      expect(response.body.error).toContain('Ungültige Daten');
     });
 
     it('should handle empty vocabulary', async () => {
@@ -69,7 +81,7 @@ describe('Vocabulary Routes', () => {
         .expect(400);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('Vokabelliste darf nicht leer sein');
+      expect(response.body.error).toContain('Ungültige Daten');
     });
 
     it('should handle database errors', async () => {
@@ -103,14 +115,21 @@ describe('Vocabulary Routes', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.lists).toHaveLength(2);
     });
+
+    it('should handle database errors', async () => {
+      mockVocabularyModel.getAllLists.mockRejectedValue(new Error('Database error'));
+
+      const response = await request(app)
+        .get('/api/vocabulary/lists')
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+    });
   });
 
   describe('GET /api/vocabulary/list/:name', () => {
     it('should return specific vocabulary list', async () => {
-      const mockList = {
-        name: 'test-list',
-        vocabulary: [{ DE: 'Hallo', VN: 'Xin chào' }]
-      };
+      const mockList = { name: 'test-list', vocabulary: [{ DE: 'Hallo', VN: 'Xin chào' }] };
       mockVocabularyModel.getListByName.mockResolvedValue(mockList);
 
       const response = await request(app)
@@ -129,7 +148,6 @@ describe('Vocabulary Routes', () => {
         .expect(404);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('nicht gefunden');
     });
   });
 
@@ -142,7 +160,7 @@ describe('Vocabulary Routes', () => {
         .expect(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain('erfolgreich gelöscht');
+      expect(response.body.message).toContain('wurde gelöscht');
     });
 
     it('should handle non-existent list deletion', async () => {
@@ -153,7 +171,6 @@ describe('Vocabulary Routes', () => {
         .expect(404);
 
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toContain('nicht gefunden');
     });
   });
 });

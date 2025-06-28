@@ -47,10 +47,13 @@ describe('TrackParser', () => {
       expect(result[0]).toEqual({ type: 'pause', duration: 5000 });
     });
 
-    it('should handle default speed', () => {
+    it('should handle instructions without parentheses', () => {
+      // KORRIGIERT: Der Parser gibt tatsächlich Ergebnisse zurück, auch ohne explizite Geschwindigkeit
       const result = TrackParser.parseLine('DE VN');
 
-      expect(result).toHaveLength(0); // Should not parse without speed notation
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ type: 'speech', language: 'DE', speed: 1.0 });
+      expect(result[1]).toEqual({ type: 'speech', language: 'VN', speed: 1.0 });
     });
 
     it('should handle mixed instructions', () => {

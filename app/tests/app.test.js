@@ -1,143 +1,131 @@
-// backend/tests/app.test.js
 const request = require('supertest');
 
-// Mock mongoose before importing the app
-jest.mock('mongoose', () => ({
+// Mock database connection
+jest.mock('../database/db-connection', () => ({
   connect: jest.fn().mockResolvedValue({}),
-  Schema: jest.fn().mockImplementation(() => ({})),
-  model: jest.fn().mockImplementation((name) => {
-    if (name === 'Message') {
-      return MockMessage;
-    }
-    return {};
+  getDb: jest.fn().mockReturnValue({
+    collection: jest.fn().mockReturnValue({
+      find: jest.fn().mockReturnValue({
+        toArray: jest.fn().mockResolvedValue([])
+      }),
+      findOne: jest.fn().mockResolvedValue(null),
+      insertOne: jest.fn().mockResolvedValue({ insertedId: '123' }),
+      updateMany: jest.fn().mockResolvedValue({ modifiedCount: 1 }),
+      deleteMany: jest.fn().mockResolvedValue({ deletedCount: 1 })
+    })
   }),
-  connection: {
-    readyState: 1,
-    close: jest.fn().mockResolvedValue({})
-  }
+  close: jest.fn().mockResolvedValue({})
 }));
 
-// Mock Message Model
-const MockMessage = {
-  find: jest.fn().mockReturnValue({
-    sort: jest.fn().mockResolvedValue([
-      {
-        _id: '507f1f77bcf86cd799439011',
-        text: 'Mock message 1',
-        timestamp: new Date('2023-01-01')
-      },
-      {
-        _id: '507f1f77bcf86cd799439012',
-        text: 'Mock message 2',
-        timestamp: new Date('2023-01-02')
-      }
-    ])
-  }),
-  prototype: {
-    save: jest.fn()
-  }
-};
+// Mock init database script
+jest.mock('../scripts/init-database', () => ({
+  checkDatabaseStatus: jest.fn().mockResolvedValue(0),
+  initDatabase: jest.fn().mockResolvedValue({})
+}));
 
-// Constructor function for new messages
-function MockMessageConstructor(data) {
-  this.text = data.text;
-  this.timestamp = data.timestamp || new Date();
-  this._id = '507f1f77bcf86cd799439013';
-  this.save = jest.fn().mockResolvedValue(this);
-  return this;
-}
-
-// Assign static methods to constructor
-Object.assign(MockMessageConstructor, MockMessage);
-
-// Override the model function to return constructor
-require('mongoose').model.mockImplementation((name) => {
-  if (name === 'Message') {
-    return MockMessageConstructor;
-  }
-  return {};
+// Mock TTS Service
+jest.mock('../services/tts-service', () => {
+  return jest.fn().mockImplementation(() => ({
+    setLanguage: jest.fn().mockReturnThis(),
+    setSpeed: jest.fn().mockReturnThis(),
+    setVoice: jest.fn().mockReturnThis(),
+    generateSpeech: jest.fn().mockResolvedValue('/path/to/audio.mp3')
+  }));
 });
 
-// Now import the app after mocking
-const { app, server } = require('../src/app');
+describe('Sprachenlern App API', () => {
+  let app;
 
-describe('Hello World Backend API', () => {
+  beforeAll(async () => {
+    // Set test environment
+    process.env.NODE_ENV = 'test';
+    process.env.GOOGLE_TTS_API_KEY = 'test-key';
+    process.env.MONGODB_URL = 'mongodb://localhost:27017/test';
 
-  afterAll(async () => {
-    if (server) {
-      await new Promise((resolve) => {
-        server.close(resolve);
-      });
-    }
-    jest.clearAllMocks();
+    // Import app after mocking
+    app = require('../app');
+
+    // Wait for app to initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
-  describe('GET /', () => {
-    it('should return hello world message', async () => {
+  afterAll(async () => {
+    // Clean up
+    delete process.env.GOOGLE_TTS_API_KEY;
+    delete process.env.MONGODB_URL;
+  });
+
+  describe('Basic Health Checks', () => {
+    it('should serve main page', async () => {
       const response = await request(app)
         .get('/')
         .expect(200);
 
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toBe('Hello World from Backend!');
+      expect(response.text).toContain('Deutsch-Vietnamesischer Vokabeltrainer');
     });
-  });
 
-  describe('GET /health', () => {
-    it('should return health status', async () => {
+    it('should serve vocabulary lists page', async () => {
       const response = await request(app)
-        .get('/health')
+        .get('/vocabulary-lists')
         .expect(200);
 
-      expect(response.body).toHaveProperty('status');
-      expect(response.body.status).toBe('OK');
-      expect(response.body).toHaveProperty('timestamp');
+      expect(response.text).toContain('Vokabellisten');
     });
-  });
 
-  describe('GET /api/messages', () => {
-    it('should return messages array', async () => {
+    it('should serve vocabulary editor page', async () => {
       const response = await request(app)
-        .get('/api/messages')
+        .get('/vocabulary-editor')
         .expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body).toHaveLength(2);
-      expect(response.body[0]).toHaveProperty('text');
-      expect(response.body[0]).toHaveProperty('timestamp');
+      expect(response.text).toContain('Vokabel-Editor');
+    });
+
+    it('should serve vocab trainer page', async () => {
+      const response = await request(app)
+        .get('/vocab-trainer')
+        .expect(200);
+
+      expect(response.text).toContain('Kartentrainer');
+    });
+
+    it('should serve text-to-speech page', async () => {
+      const response = await request(app)
+        .get('/text-to-speech')
+        .expect(200);
+
+      expect(response.text).toContain('Freitext zu Sprache');
     });
   });
 
-  describe('POST /api/messages', () => {
-    it('should create a new message', async () => {
-      const newMessage = { text: 'Test message from unit test' };
-
+  describe('API Endpoints', () => {
+    it('should handle TTS lists API', async () => {
       const response = await request(app)
-        .post('/api/messages')
-        .send(newMessage)
-        .expect(201);
+        .get('/api/tts/lists')
+        .expect(200);
 
-      expect(response.body).toHaveProperty('text');
-      expect(response.body.text).toBe('Test message from unit test');
-      expect(response.body).toHaveProperty('_id');
+      expect(response.body).toHaveProperty('lists');
     });
 
-    it('should fail when text is missing', async () => {
+    it('should handle vocabulary API', async () => {
       const response = await request(app)
-        .post('/api/messages')
-        .send({})
-        .expect(400);
+        .get('/api/vocabulary/lists')
+        .expect(200);
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toHaveProperty('success');
+    });
+  });
+
+  describe('Static File Serving', () => {
+    it('should serve CSS files', async () => {
+      await request(app)
+        .get('/css/styles.css')
+        .expect(200);
     });
 
-    it('should fail when text is empty', async () => {
-      const response = await request(app)
-        .post('/api/messages')
-        .send({ text: '' })
-        .expect(400);
-
-      expect(response.body).toHaveProperty('error');
+    it('should serve JavaScript files', async () => {
+      await request(app)
+        .get('/js/api-client.js')
+        .expect(200);
     });
   });
 });
