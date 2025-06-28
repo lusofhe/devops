@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  # App Build und Test (vorher backend)
+  # App Build und Test
   app:
     runs-on: ubuntu-latest
     env:
@@ -28,16 +28,38 @@ jobs:
         working-directory: app
         run: npm ci
 
-      # Tests erstmal deaktiviert
-      # - name: Test App
-      #   working-directory: app
-      #   run: npm test
+      - name: Lint App
+        working-directory: app
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Test App
+        working-directory: app
+        run: npm test
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: app/coverage/
+
+      - name: SonarQube Scan
+        uses: sonarqube-quality-gate-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=lusofhe_devops
+            -Dsonar.organization=lusofhe
+            -Dsonar.host.url=https://sonarcloud.io
 
       - name: Build App
         working-directory: app
         run: npm run build || echo "No build script found"
 
-  # Docker Build and Push (angepasst)
+  # Docker Build and Push
   docker:
     needs: [app]
     runs-on: ubuntu-latest
@@ -70,3 +92,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:latest
             ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
