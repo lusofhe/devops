@@ -1,7 +1,7 @@
 // database/handlers/db-handler.js
-const path = require('path');
-const fs = require('fs');
-const { ObjectId } = require('mongodb');
+//const path = require('path');
+//const fs = require('fs');
+//const { ObjectId } = require('mongodb');
 const dbConnection = require('../db-connection');
 
 /**

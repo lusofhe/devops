@@ -132,38 +132,43 @@ router.post('/generate/:filename', async (req, res) => {
       return res.status(404).json({ error: 'Datei nicht gefunden' });
     }
 
-    const vocabulary = JSONParser.parseFile(filePath);
+
     const results = [];
     const fileBaseName = req.params.filename.replace('.json', '');
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const vocabulary = JSON.parse(fileContent).map(entry => ({
+      DE: entry.DE || entry.deutsch || '',
+      VN: entry.VN || entry.vietnamesisch || ''
+    })).filter(entry => entry.DE && entry.VN);
 
-// Für jedes Vokabelpaar Audio-Dateien generieren
-for (const [index, entry] of vocabulary.entries()) {
-  // Für deutsche Wörter
-  const germanFile = await ttsService
-    .setLanguage('DE')
-    .setSpeed(speed)
-    .setVoice(voice)
-    .generateSpeech(entry.DE);
+    // Für jedes Vokabelpaar Audio-Dateien generieren
+    for (const [index, entry] of vocabulary.entries()) {
+      // Für deutsche Wörter
+      const germanFile = await ttsService
+        .setLanguage('DE')
+        .setSpeed(speed)
+        .setVoice(voice)
+        .generateSpeech(entry.DE);
 
-  // Für vietnamesische Wörter
-  const vietnameseFile = await ttsService
-    .setLanguage('VN')
-    .setSpeed(speed)
-    .setVoice(voice)
-    .generateSpeech(entry.VN);
+      // Für vietnamesische Wörter
+      const vietnameseFile = await ttsService
+        .setLanguage('VN')
+        .setSpeed(speed)
+        .setVoice(voice)
+        .generateSpeech(entry.VN);
 
-  results.push({
-    index,
-    DE: {
-      text: entry.DE,
-      audio: `/audio/${path.basename(germanFile)}`
-    },
-    VN: {
-      text: entry.VN,
-      audio: `/audio/${path.basename(vietnameseFile)}`
+      results.push({
+        index,
+        DE: {
+          text: entry.DE,
+          audio: `/audio/${path.basename(germanFile)}`
+        },
+        VN: {
+          text: entry.VN,
+          audio: `/audio/${path.basename(vietnameseFile)}`
+        }
+      });
     }
-  });
-}
 
 
     res.json({

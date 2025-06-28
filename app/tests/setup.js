@@ -13,7 +13,7 @@ global.console = {
   ...console,
   log: jest.fn(),
   warn: jest.fn(),
-  error: console.error, // Errors weiterhin anzeigen
+  error: console.error // Errors weiterhin anzeigen
 };
 
 // Automatisches Cleanup von Timers und Mocks

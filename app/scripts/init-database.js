@@ -96,7 +96,7 @@ async function checkDatabaseStatus() {
 
     const existingLists = await vocabModel.getAllLists();
     return existingLists.length;
-  } catch (error) {
+  } catch {
     return 0;
   } finally {
     await dbConnection.close();

@@ -40,7 +40,7 @@ class TrackParser {
       } else if (part.startsWith('DE') || part.startsWith('VN')) {
         // Format: DE(speed) or VN(speed)
         const language = part.substring(0, 2);
-        const speedMatch = part.match(/\(([\d\.]+)\)/);
+        const speedMatch = part.match(/\(([\d.]+)\)/);
         const speed = speedMatch ? parseFloat(speedMatch[1]) : 1.0;
 
         instructions.push({

@@ -2,8 +2,8 @@
 const fs = require('fs');
 const path = require('path');
 const VocabularyModel = require('../models/vocabulary-model');
-const dbConfig = require('../../../config/database');
-const { MongoClient } = require('mongodb');
+//const dbConfig = require('../../../config/database');
+//const { MongoClient } = require('mongodb');
 
 /**
  * Hilfsklasse zum Importieren bestehender JSON-Vokabellisten

@@ -20,66 +20,66 @@ class TTSService {
     }
   }
 
-// Sichere API-Key Laden mit Umgebungsvariablen
-loadApiKey() {
+  // Sichere API-Key Laden mit Umgebungsvariablen
+  loadApiKey() {
   // 1. Priorität: Umgebungsvariable
-  if (process.env.GOOGLE_TTS_API_KEY) {
-    this.apiKey = process.env.GOOGLE_TTS_API_KEY;
-    console.log('🔑 Google TTS API Key aus Umgebungsvariable geladen');
-    return;
-  }
-
-  // 2. Fallback für lokale Entwicklung: JSON-Datei
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      const keyFilePath = path.join(__dirname, '../config/googleapikey.json');
-      if (fs.existsSync(keyFilePath)) {
-        const keyFileContent = fs.readFileSync(keyFilePath, 'utf8');
-        const keyData = JSON.parse(keyFileContent);
-
-        if (keyData.apiKey) {
-          this.apiKey = keyData.apiKey;
-          console.log('🔑 Google TTS API Key aus Datei geladen (Development-Modus)');
-          return;
-        }
-      }
-    } catch (error) {
-      console.warn('⚠️ Konnte API-Key nicht aus Datei laden:', error.message);
+    if (process.env.GOOGLE_TTS_API_KEY) {
+      this.apiKey = process.env.GOOGLE_TTS_API_KEY;
+      console.log('🔑 Google TTS API Key aus Umgebungsvariable geladen');
+      return;
     }
+
+    // 2. Fallback für lokale Entwicklung: JSON-Datei
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const keyFilePath = path.join(__dirname, '../config/googleapikey.json');
+        if (fs.existsSync(keyFilePath)) {
+          const keyFileContent = fs.readFileSync(keyFilePath, 'utf8');
+          const keyData = JSON.parse(keyFileContent);
+
+          if (keyData.apiKey) {
+            this.apiKey = keyData.apiKey;
+            console.log('🔑 Google TTS API Key aus Datei geladen (Development-Modus)');
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Konnte API-Key nicht aus Datei laden:', error.message);
+      }
+    }
+
+    // 3. Fehler werfen wenn nichts gefunden
+    const errorMsg = process.env.NODE_ENV === 'production'
+      ? 'GOOGLE_TTS_API_KEY Umgebungsvariable ist in Production erforderlich'
+      : 'Google TTS API Key nicht gefunden. Setzen Sie GOOGLE_TTS_API_KEY Umgebungsvariable oder erstellen Sie config/googleapikey.json';
+
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
   }
 
-  // 3. Fehler werfen wenn nichts gefunden
-  const errorMsg = process.env.NODE_ENV === 'production'
-    ? 'GOOGLE_TTS_API_KEY Umgebungsvariable ist in Production erforderlich'
-    : 'Google TTS API Key nicht gefunden. Setzen Sie GOOGLE_TTS_API_KEY Umgebungsvariable oder erstellen Sie config/googleapikey.json';
-
-  console.error('❌', errorMsg);
-  throw new Error(errorMsg);
-}
-
-// Sprache einstellen
-setLanguage(language) {
+  // Sprache einstellen
+  setLanguage(language) {
   // Liste der unterstützten Sprachen
-  const supportedLanguages = {
-    'DE': 'de-DE',
-    'VN': 'vi-VN',
-    // Für Abwärtskompatibilität
-    'deutsch': 'de-DE',
-    'vietnamesisch': 'vi-VN',
+    const supportedLanguages = {
+      'DE': 'de-DE',
+      'VN': 'vi-VN',
+      // Für Abwärtskompatibilität
+      'deutsch': 'de-DE',
+      'vietnamesisch': 'vi-VN'
     // Weitere Sprachen können hier hinzugefügt werden
-  };
+    };
 
-  // Überprüfen, ob die angegebene Sprache unterstützt wird
-  if (language in supportedLanguages) {
-    this.language = supportedLanguages[language];
-  } else if (Object.values(supportedLanguages).includes(language)) {
-    this.language = language;
-  } else {
-    console.warn(`Warnung: Sprache "${language}" nicht erkannt, verwende Standard (${this.language})`);
+    // Überprüfen, ob die angegebene Sprache unterstützt wird
+    if (language in supportedLanguages) {
+      this.language = supportedLanguages[language];
+    } else if (Object.values(supportedLanguages).includes(language)) {
+      this.language = language;
+    } else {
+      console.warn(`Warnung: Sprache "${language}" nicht erkannt, verwende Standard (${this.language})`);
+    }
+
+    return this;
   }
-
-  return this;
-}
 
 
   // Sprechgeschwindigkeit einstellen (0.25 bis 4.0)

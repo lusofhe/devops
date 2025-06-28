@@ -18,7 +18,11 @@ export default [
         require: 'readonly',
         exports: 'readonly',
         global: 'readonly',
-
+        // Timer globals
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
         // Jest globals
         describe: 'readonly',
         it: 'readonly',
