@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Deutsch-Vietnamesischer Vokabeltrainer mit Text-to-Speech",
   "main": "app.js",
-  "type": "module",
   "keywords": [
     "vocabulary",
     "language-learning",
@@ -46,7 +45,7 @@
     "jest": "^29.0.0",
     "jest-sonar-reporter": "^2.0.0",
     "mongodb-memory-server": "^10.1.4",
-    "nodemon": "^2.0.22",
+    "nodemon": "^3.0.0",
     "sonar-scanner": "^3.1.0",
     "supertest": "^6.3.3"
   },

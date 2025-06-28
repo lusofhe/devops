@@ -1,0 +1,22 @@
+FROM node:18-alpine
+
+# su-exec installieren für User-Wechsel
+RUN apk add --no-cache su-exec
+
+# Arbeitsverzeichnis
+WORKDIR /app
+
+# Package files kopieren
+COPY package*.json ./
+
+# Dependencies installieren
+RUN npm ci
+
+# Alle App-Dateien kopieren
+COPY . .
+
+# Port freigeben
+EXPOSE 3000
+
+# Standard-Command (wird von docker-compose überschrieben)
+CMD ["npm", "run", "dev"]
