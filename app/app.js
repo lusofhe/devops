@@ -124,13 +124,17 @@ dbConnection.connect().then(async () => {
     });
   });
 
-  // Start server
-  app.listen(port, () => {
-    console.log(`Server läuft auf http://localhost:${port}`);
-  });
+// Start server
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(port, () => {
+      console.log(`Server läuft auf http://localhost:${port}`);
+    });
+  }
 }).catch(err => {
   console.error('Failed to connect to database:', err);
-  process.exit(1);
+  if (process.env.NODE_ENV !== 'test') {
+    process.exit(1);
+  }
 });
 
 module.exports = app;
