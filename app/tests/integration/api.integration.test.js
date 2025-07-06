@@ -68,16 +68,16 @@ describe('API Integration Tests', () => {
 
       // Create vocabulary list
       const createResponse = await request(app)
-          .post('/api/vocabulary/save')
-          .send(vocabularyData)
-          .expect(200);
+        .post('/api/vocabulary/save')
+        .send(vocabularyData)
+        .expect(200);
 
       expect(createResponse.body.success).toBe(true);
 
       // Retrieve vocabulary list
       const getResponse = await request(app)
-          .get('/api/vocabulary/list/integration-test')
-          .expect(200);
+        .get('/api/vocabulary/list/integration-test')
+        .expect(200);
 
       expect(getResponse.body.success).toBe(true);
       expect(getResponse.body.name).toBe('integration-test');
@@ -85,23 +85,23 @@ describe('API Integration Tests', () => {
 
       // List all vocabularies
       const listResponse = await request(app)
-          .get('/api/vocabulary/lists')
-          .expect(200);
+        .get('/api/vocabulary/lists')
+        .expect(200);
 
       expect(listResponse.body.success).toBe(true);
       expect(listResponse.body.lists).toHaveLength(1);
 
       // Delete vocabulary list
       const deleteResponse = await request(app)
-          .delete('/api/vocabulary/list/integration-test')
-          .expect(200);
+        .delete('/api/vocabulary/list/integration-test')
+        .expect(200);
 
       expect(deleteResponse.body.success).toBe(true);
 
       // Verify deletion
       await request(app)
-          .get('/api/vocabulary/list/integration-test')
-          .expect(404);
+        .get('/api/vocabulary/list/integration-test')
+        .expect(404);
     });
 
     it('should handle duplicate list names', async () => {
@@ -112,15 +112,15 @@ describe('API Integration Tests', () => {
 
       // Create first list
       await request(app)
-          .post('/api/vocabulary/save')
-          .send(vocabularyData)
-          .expect(200);
+        .post('/api/vocabulary/save')
+        .send(vocabularyData)
+        .expect(200);
 
       // Try to create duplicate
       const response = await request(app)
-          .post('/api/vocabulary/save')
-          .send(vocabularyData)
-          .expect(409);
+        .post('/api/vocabulary/save')
+        .send(vocabularyData)
+        .expect(409);
 
       expect(response.body.success).toBe(false);
       expect(response.body.error).toContain('existiert bereits');
@@ -129,23 +129,23 @@ describe('API Integration Tests', () => {
     it('should handle invalid input data', async () => {
       // Test empty vocabulary
       const response1 = await request(app)
-          .post('/api/vocabulary/save')
-          .send({
-            name: 'empty-test',
-            vocabulary: []
-          })
-          .expect(400);
+        .post('/api/vocabulary/save')
+        .send({
+          name: 'empty-test',
+          vocabulary: []
+        })
+        .expect(400);
 
       expect(response1.body.success).toBe(false);
       expect(response1.body.error).toContain('Ungültige Daten');
 
       // Test missing name
       const response2 = await request(app)
-          .post('/api/vocabulary/save')
-          .send({
-            vocabulary: [{ DE: 'Test', VN: 'Thử nghiệm' }]
-          })
-          .expect(400);
+        .post('/api/vocabulary/save')
+        .send({
+          vocabulary: [{ DE: 'Test', VN: 'Thử nghiệm' }]
+        })
+        .expect(400);
 
       expect(response2.body.success).toBe(false);
       expect(response2.body.error).toContain('Ungültige Daten');
@@ -161,14 +161,14 @@ describe('API Integration Tests', () => {
       };
 
       await request(app)
-          .post('/api/vocabulary/save')
-          .send(vocabularyData);
+        .post('/api/vocabulary/save')
+        .send(vocabularyData);
     });
 
     it('should list available vocabulary lists', async () => {
       const response = await request(app)
-          .get('/api/tts/lists')
-          .expect(200);
+        .get('/api/tts/lists')
+        .expect(200);
 
       expect(response.body).toHaveProperty('lists');
       // Note: This might need to be adjusted based on your actual TTS implementation
@@ -177,8 +177,8 @@ describe('API Integration Tests', () => {
     it('should get specific vocabulary list', async () => {
       // This test might need to be adjusted based on your actual TTS API implementation
       const response = await request(app)
-          .get('/api/vocabulary/list/tts-test')
-          .expect(200);
+        .get('/api/vocabulary/list/tts-test')
+        .expect(200);
 
       expect(response.body.name).toBe('tts-test');
       expect(response.body.vocabulary).toHaveLength(1);

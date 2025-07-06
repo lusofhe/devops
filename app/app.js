@@ -124,7 +124,7 @@ dbConnection.connect().then(async () => {
     });
   });
 
-// Start server
+  // Start server
   if (process.env.NODE_ENV !== 'test') {
     app.listen(port, () => {
       console.log(`Server läuft auf http://localhost:${port}`);
