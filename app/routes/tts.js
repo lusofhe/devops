@@ -126,31 +126,27 @@ router.post('/generate-word', async (req, res) => {
 router.post('/generate/:filename', async (req, res) => {
   try {
     const { speed = 0.8, voice = 'FEMALE' } = req.body;
-    const filePath = path.join(VOCABULARY_DIR, req.params.filename);
+    const listName = req.params.filename.replace('.json', '');
 
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Datei nicht gefunden' });
+    // Aus MongoDB laden statt aus JSON-Datei
+    const dbList = await vocabularyModel.getListByName(listName);
+    if (!dbList) {
+      return res.status(404).json({ error: 'Vokabelliste nicht gefunden' });
     }
 
-
+    const vocabulary = dbList.vocabulary;
     const results = [];
-    const fileBaseName = req.params.filename.replace('.json', '');
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    const vocabulary = JSON.parse(fileContent).map(entry => ({
-      DE: entry.DE || entry.deutsch || '',
-      VN: entry.VN || entry.vietnamesisch || ''
-    })).filter(entry => entry.DE && entry.VN);
 
     // Für jedes Vokabelpaar Audio-Dateien generieren
     for (const [index, entry] of vocabulary.entries()) {
-      // Für deutsche Wörter
+      // Deutsche Wörter
       const germanFile = await ttsService
         .setLanguage('DE')
         .setSpeed(speed)
         .setVoice(voice)
         .generateSpeech(entry.DE);
 
-      // Für vietnamesische Wörter
+      // Vietnamesische Wörter
       const vietnameseFile = await ttsService
         .setLanguage('VN')
         .setSpeed(speed)
@@ -170,10 +166,9 @@ router.post('/generate/:filename', async (req, res) => {
       });
     }
 
-
     res.json({
       success: true,
-      name: fileBaseName,
+      name: listName,
       entries: results
     });
   } catch (error) {
