@@ -106,4 +106,3 @@ jobs:
             # Show public IP for reference
             echo "Public IP: $(curl -s ifconfig.me 2>/dev/null || echo 'Unknown')"
             echo "App should be available at: http://$(curl -s ifconfig.me 2>/dev/null):3000"
-
