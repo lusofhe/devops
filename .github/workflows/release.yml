@@ -1,4 +1,4 @@
-name: Delivery – Build & Push Image
+name: Delivery - Build & Push Image
 
 on:
   push:
@@ -39,4 +39,5 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:latest
 
       - name: Output image tag
-        run: echo "Image tag: ${{ steps.ver.outputs.tag }}"
+        run: |
+          echo "Image tag: ${{ steps.ver.outputs.tag }}"
