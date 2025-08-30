@@ -1,0 +1,77 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    env:
+      NODE_VERSION: "22"
+
+    steps:
+      # 1. Repository Setup
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Für bessere SonarQube-Analyse
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: "./app/package-lock.json"
+
+      # 2. Dependencies Installation
+      - name: Install App Dependencies
+        working-directory: app
+        run: npm ci
+
+      # 3. Code Quality Checks (Quality Gate Teil 1)
+      - name: Lint App
+        working-directory: app
+        run: npm run lint
+
+      # 4. Testing with Coverage (Quality Gate Teil 2)
+      - name: Run App Tests with Coverage
+        working-directory: app
+        run: npm test
+
+      - name: Check Coverage Thresholds
+        working-directory: app
+        run: |
+          echo "Überprüfe Coverage-Schwellenwerte..."
+          npm test -- --passWithNoTests
+          echo "Coverage-Prüfung bestanden"
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: app/coverage/
+
+      # 5. Static Code Analysis (Quality Gate Teil 3)
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # 6. Quality Gate Summary
+      - name: Quality Gate Summary
+        if: success()
+        run: |
+
+          echo "Linting, Tests, Coverage, SonarQube OK. Quality Gate bestanden."
+          echo "Pipeline kann zu Continuous Delivery weiterleiten"
+
+      - name: Quality Gate Failed
+        if: failure()
+        run: |
+          echo "❌ Quality Gate fehlgeschlagen: Code-Qualitätsstandards nicht erfüllt."
+          exit 1

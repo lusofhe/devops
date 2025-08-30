@@ -1,0 +1,191 @@
+name: Continuous Deployment
+
+on:
+  workflow_run:
+    workflows: ["Continuous Delivery"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Specific image tag to deploy (default: latest)'
+        required: false
+        default: 'latest'
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+      url: 'http://your-server-ip:3000'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Deployment Variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          else
+            IMAGE_TAG="latest"
+            ENVIRONMENT="production"
+          fi
+
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+
+          echo "Deploying image tag: ${IMAGE_TAG}"
+          echo "Target environment: ${ENVIRONMENT}"
+
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "🚀 Starting Continuous Deployment..."
+            echo "📋 Image: ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.vars.outputs.image_tag }}"
+            echo "🎯 Environment: ${{ steps.vars.outputs.environment }}"
+
+            # Stop existing containers
+            echo "⏹️  Stopping existing containers..."
+            docker compose down || true
+
+            # Pull specific image version
+            echo "📥 Pulling new image..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.vars.outputs.image_tag }}
+
+            # Create environment file
+            echo "⚙️  Creating environment configuration..."
+            cat > .env << EOF
+            DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            IMAGE_TAG=${{ steps.vars.outputs.image_tag }}
+            MONGO_USERNAME=${{ secrets.MONGO_USERNAME }}
+            MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }}
+            MONGO_EXPRESS_USERNAME=${{ secrets.MONGO_EXPRESS_USERNAME }}
+            MONGO_EXPRESS_PASSWORD=${{ secrets.MONGO_EXPRESS_PASSWORD }}
+            GOOGLE_TTS_API_KEY=${{ secrets.GOOGLE_TTS_API_KEY }}
+            ENVIRONMENT=${{ steps.vars.outputs.environment }}
+            EOF
+
+            # Create docker-compose.yml on server
+            echo "📝 Creating docker-compose configuration..."
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+            services:
+              mongodb:
+                image: mongo:latest
+                environment:
+                  MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+                  MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+                  MONGO_INITDB_DATABASE: vocabulary
+                ports:
+                  - "27017:27017"
+                volumes:
+                  - mongodb_data:/data/db
+                healthcheck:
+                  test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+
+              mongo-express:
+                image: mongo-express:latest
+                environment:
+                  ME_CONFIG_MONGODB_SERVER: mongodb
+                  ME_CONFIG_MONGODB_PORT: 27017
+                  ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USERNAME}
+                  ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD}
+                  ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME}
+                  ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
+                ports:
+                  - "8081:8081"
+                depends_on:
+                  mongodb:
+                    condition: service_healthy
+
+              app:
+                image: ${DOCKER_USERNAME}/sprachenlern-app:${IMAGE_TAG}
+                ports:
+                  - "3000:3000"
+                environment:
+                  MONGODB_URL: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/vocabulary?authSource=admin
+                  GOOGLE_TTS_API_KEY: ${GOOGLE_TTS_API_KEY}
+                  NODE_ENV: ${ENVIRONMENT}
+                  AUTO_INIT: true
+                depends_on:
+                  mongodb:
+                    condition: service_healthy
+                volumes:
+                  - audio_files:/app/public/audio
+                healthcheck:
+                  test: curl -f http://localhost:3000 || exit 1
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                restart: unless-stopped
+
+            volumes:
+              mongodb_data:
+              audio_files:
+            EOF
+
+            # Start services
+            echo "🚀 Starting services..."
+            docker compose --env-file .env up -d
+
+            # Wait for services to be ready
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+
+            # Health checks
+            echo "🔍 Performing health checks..."
+            docker compose ps
+
+            # Test app connectivity
+            echo "🧪 Testing application..."
+            if curl -f http://localhost:3000 >/dev/null 2>&1; then
+              echo "✅ Application is responding"
+            else
+              echo "❌ Application health check failed"
+              docker compose logs app
+              exit 1
+            fi
+
+            # Show public access information
+            PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || echo 'Unknown')
+            echo ""
+            echo "🎉 Deployment completed successfully!"
+            echo "📍 Public IP: ${PUBLIC_IP}"
+            echo "🌐 App URL: http://${PUBLIC_IP}:3000"
+            echo "🗄️  Mongo Express: http://${PUBLIC_IP}:8081"
+            echo "🏷️  Deployed version: ${{ steps.vars.outputs.image_tag }}"
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "✅ Continuous Deployment erfolgreich abgeschlossen!"
+          echo "🎯 Environment: ${{ steps.vars.outputs.environment }}"
+          echo "🏷️  Version: ${{ steps.vars.outputs.image_tag }}"
+          echo "🌐 Application ist online verfügbar"
+
+      - name: Deployment Failed
+        if: failure()
+        run: |
+          echo "❌ Continuous Deployment fehlgeschlagen!"
+          echo "🔧 Überprüfen Sie die Logs und Server-Konfiguration"
+          exit 1
