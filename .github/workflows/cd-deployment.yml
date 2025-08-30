@@ -1,10 +1,11 @@
 name: Continuous Deployment
 
 on:
-  workflow_run:
-    workflows: ["Continuous Delivery"]
-    types: [completed]
-    branches: [main]
+  # Automatisch Deployen:
+  # workflow_run:
+  #   workflows: ["Continuous Delivery"]
+  #   types: [completed]
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       image_tag:
@@ -19,11 +20,20 @@ on:
         options:
         - production
         - staging
+      # nur nach Bestätigung deployen
+      confirm_deployment:
+        description: 'Confirm deployment'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    #automatischer Deploy:
+    #if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    #manueller Deploy:
+    if: ${{ github.event.inputs.confirm_deployment == 'true' }}
 
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
