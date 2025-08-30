@@ -79,7 +79,7 @@ jobs:
           projectBaseDir: app/
           args: >
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.organization=${{ secrets.SONAR_ORG }}
             -Dsonar.sources=.
             -Dsonar.exclusions=node_modules/**,coverage/**,tests/**
             -Dsonar.tests=tests
