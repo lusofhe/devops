@@ -30,31 +30,17 @@ jobs:
         uses: actions/checkout@v4
 
       # 2. Semantic Versioning
-      - name: Generate Semantic Version
+      - name: Generate Version
         id: version
+        working-directory: app
         run: |
-          # Einfaches Semantic Versioning basierend auf Datum und Git-Hash
-          DATE_VERSION=$(date +%Y%m%d)
+          VERSION=$(node -p "require('./package.json').version")
+          DATETIME=$(date -u +"%Y-%m-%d-%H:%M:%S")
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-
-          # Überprüfe auf Breaking Changes, Features oder Patches in Commit-Messages
-          COMMITS=$(git log --oneline -n 10)
-
-          if echo "$COMMITS" | grep -q "BREAKING CHANGE\|breaking:\|major:"; then
-            VERSION_TYPE="major"
-          elif echo "$COMMITS" | grep -q "feat:\|feature:\|minor:"; then
-            VERSION_TYPE="minor"
-          else
-            VERSION_TYPE="patch"
-          fi
-
-          VERSION_TAG="${DATE_VERSION}-${VERSION_TYPE}-${SHORT_SHA}"
-
-          echo "version=${VERSION_TAG}" >> $GITHUB_OUTPUT
-          echo "version_type=${VERSION_TYPE}" >> $GITHUB_OUTPUT
-
-          echo "Generated version: ${VERSION_TAG}"
-          echo "Version type: ${VERSION_TYPE}"
+          BUILD_VERSION="${VERSION}-${DATETIME}-${SHORT_SHA}"
+          
+          echo "version=${BUILD_VERSION}" >> $GITHUB_OUTPUT
+          echo "Generated version: ${BUILD_VERSION}"
 
       # 3. Docker Setup
       - name: Set up Docker Buildx
@@ -99,7 +85,6 @@ jobs:
           echo "   - ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:latest"
           echo "   - ${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.version.outputs.version }}"
           echo "Version: ${{ steps.version.outputs.version }}"
-          echo "Version Type: ${{ steps.version.outputs.version_type }}"
           echo "Bereit für Deployment"
 
       # 7. Create GitHub Release (optional)
@@ -116,7 +101,6 @@ jobs:
 
             ### Changes
             - Build triggered by commit ${{ github.sha }}
-            - Version type: ${{ steps.version.outputs.version_type }}
 
             ### Docker Images
             - `${{ secrets.DOCKER_USERNAME }}/sprachenlern-app:${{ steps.version.outputs.version }}`
