@@ -54,7 +54,7 @@ jobs:
         if: always()
         with:
           name: coverage-reports
-          path: app/coverage/
+          path: coverage/
 
       # 5. Static Code Analysis (Quality Gate Teil 3)
       - name: SonarQube Scan
