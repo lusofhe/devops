@@ -71,8 +71,14 @@ const config = {
       if (environment === 'development') {
         const { username, password, authSource } = this.auth;
         if (username && password) {
-          const devUrl = `mongodb://${encodeURIComponent(username)}:${encodeURIComponent(password)}@localhost:27017/${this.dbName}?authSource=${authSource}`;
-          console.log('🔧 Using development MongoDB configuration');
+            const devUrl =
+                "mongodb://" +
+                `${encodeURIComponent(username)}:${encodeURIComponent(password)}` +
+                "@localhost:27017/" +
+                `${this.dbName}` +
+                `?authSource=${authSource}`;
+
+            console.log('🔧 Using development MongoDB configuration');
           return devUrl;
         }
 

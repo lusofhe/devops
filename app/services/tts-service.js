@@ -51,7 +51,8 @@ class TTSService {
     // 3. Fehler werfen wenn nichts gefunden
     const errorMsg = process.env.NODE_ENV === 'production'
       ? 'GOOGLE_TTS_API_KEY Umgebungsvariable ist in Production erforderlich'
-      : 'Google TTS API Key nicht gefunden. Setzen Sie GOOGLE_TTS_API_KEY Umgebungsvariable oder erstellen Sie config/googleapikey.json';
+      : 'Google TTS API Key nicht gefunden. Setzen Sie GOOGLE_TTS_API_KEY Umgebungsvariable '
+      +'oder erstellen Sie config/googleapikey.json';
 
     console.error('❌', errorMsg);
     throw new Error(errorMsg);
