@@ -12,6 +12,11 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write
+  packages: write
+  pull-requests: read
+
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
