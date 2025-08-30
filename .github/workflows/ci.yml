@@ -40,7 +40,7 @@ jobs:
       # 4. Testing with Coverage (Quality Gate Teil 2)
       - name: Run App Tests with Coverage
         working-directory: app
-        run: npm test
+        run: npm test -- --coverage
 
       - name: Debug - List files after test
         working-directory: app
