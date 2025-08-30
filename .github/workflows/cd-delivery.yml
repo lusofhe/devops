@@ -35,7 +35,7 @@ jobs:
         working-directory: app
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          DATETIME=$(date -u +"%Y-%m-%d-%H:%M:%S")
+          DATETIME=$(date -u +"%Y-%m-%d-%H-%M-%S")
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           BUILD_VERSION="${VERSION}-${DATETIME}-${SHORT_SHA}"
           
