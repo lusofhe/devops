@@ -42,6 +42,18 @@ jobs:
         working-directory: app
         run: npm test
 
+      - name: Debug - List files after test
+        working-directory: app
+        run: |
+          echo "Checking if coverage directory exists..."
+          ls -la
+          if [ -d "coverage" ]; then
+            echo "Coverage directory found:"
+            ls -la coverage/
+          else
+            echo "Coverage directory not found!"
+          fi
+
       - name: Check Coverage Thresholds
         working-directory: app
         run: |
@@ -49,24 +61,28 @@ jobs:
           npm test -- --passWithNoTests
           echo "Coverage-Prüfung bestanden"
 
+      # path for coverage upload
       - name: Upload Coverage Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-reports
-          path: coverage/
+          path: app/coverage/
 
       # 5. Static Code Analysis (Quality Gate Teil 3)
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL || 'https://sonarcloud.io' }}
+        with:
+          projectBaseDir: app/  # Add this to scan the app directory
 
       # 6. Quality Gate Summary
       - name: Quality Gate Summary
         if: success()
         run: |
-
+          echo "✅ Quality Gate bestanden!"
           echo "Linting, Tests, Coverage, SonarQube OK. Quality Gate bestanden."
           echo "Pipeline kann zu Continuous Delivery weiterleiten"
 
